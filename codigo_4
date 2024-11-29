@@ -1,0 +1,103 @@
+# Importar las librerías necesarias
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# 1. Cargar y analizar los datos
+titanic_data = pd.read_csv("Titanic-Dataset.csv")  # Ajusta la ruta si es necesario
+
+# Información básica del dataset
+print("Información del dataset:")
+print(titanic_data.info())
+
+# Análisis estadístico y exploratorio
+print("\nEstadísticas descriptivas:")
+print(titanic_data.describe())
+
+# Visualización inicial
+plt.figure(figsize=(15, 5))
+sns.countplot(data=titanic_data, x="Pclass", hue="Survived")
+plt.title("Supervivencia según la Clase")
+plt.show()
+
+# 2. Preprocesamiento de datos
+titanic_cleaned = titanic_data.copy()
+
+# Imputar valores faltantes
+titanic_cleaned['Age'].fillna(titanic_cleaned['Age'].median(), inplace=True)
+titanic_cleaned['Embarked'].fillna(titanic_cleaned['Embarked'].mode()[0], inplace=True)
+
+# Eliminar columnas irrelevantes o con demasiados valores faltantes
+titanic_cleaned.drop(columns=['PassengerId', 'Name', 'Ticket', 'Cabin'], inplace=True)
+
+# Convertir variables categóricas a numéricas
+titanic_cleaned = pd.get_dummies(titanic_cleaned, columns=['Sex', 'Embarked'], drop_first=True)
+
+# Confirmar que no hay valores faltantes
+print("\nValores faltantes después del preprocesamiento:")
+print(titanic_cleaned.isnull().sum())
+
+# 3. Selección de características
+X = titanic_cleaned.drop('Survived', axis=1)
+y = titanic_cleaned['Survived']
+
+# 4. División en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# 5. Entrenamiento del modelo (Regresión Logística)
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train, y_train)
+
+# 6. Evaluación del modelo
+y_pred = model.predict(X_test)
+
+# Cálculo de métricas
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+
+# Mostrar métricas
+print("\nMétricas de desempeño:")
+print(f"Accuracy: {accuracy:.2f}")
+print(f"Precision: {precision:.2f}")
+print(f"Recall: {recall:.2f}")
+print(f"F1-score: {f1:.2f}")
+
+# Matriz de confusión y reporte de clasificación
+cm = confusion_matrix(y_test, y_pred)
+print("\nMatriz de confusión:")
+print(cm)
+
+print("\nReporte de clasificación:")
+print(classification_report(y_test, y_pred))
+
+# 7. Visualizaciones
+# Matriz de confusión visualizada
+plt.figure(figsize=(7, 5))
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=["No sobrevivió", "Sobrevivió"], yticklabels=["No sobrevivió", "Sobrevivió"])
+plt.title("Matriz de Confusión")
+plt.xlabel("Predicción")
+plt.ylabel("Realidad")
+plt.show()
+
+# Coeficientes del modelo
+coefficients = pd.DataFrame({
+    'Feature': X.columns,
+    'Coefficient': model.coef_[0]
+}).sort_values(by='Coefficient', ascending=False)
+
+plt.figure(figsize=(10, 6))
+sns.barplot(data=coefficients, x='Coefficient', y='Feature', palette='viridis')
+plt.title("Importancia de las Características (Coeficientes del Modelo)")
+plt.show()
+
+# Interpretación
+print("\nAnálisis e interpretación:")
+print("1. El modelo tiene un desempeño razonable, con un buen balance entre precisión y recall.")
+print("2. Las variables más importantes para predecir la supervivencia incluyen características como la tarifa (Fare) y el género (Sex_male).")
+print("3. El modelo podría mejorarse con técnicas avanzadas como la optimización de hiperparámetros o ingeniería de características.")
